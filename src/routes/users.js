@@ -14,12 +14,15 @@ router.put('/me/profile', authenticate, requireActive(), userController.updatePr
 // Search users (public endpoint with optional auth)
 router.get('/search', userController.searchUsers);
 
-// Get user by username (public endpoint)
-router.get('/:username', userController.getUserByUsername);
+// Get user public profile by ID
+router.get('/:id', userController.getPublicProfile);
 
-// Creator application routes - will implement in next phase
-router.post('/creator-application', (req, res) => {
-  res.json({ message: 'Creator application - coming soon' });
-});
+// Follow/unfollow user
+router.post('/:id/follow', authenticate, requireActive(), userController.followUser);
+router.delete('/:id/follow', authenticate, requireActive(), userController.unfollowUser);
+
+// Get followers/following
+router.get('/:id/followers', userController.getFollowers);
+router.get('/:id/following', userController.getFollowing);
 
 module.exports = router;

@@ -1,25 +1,47 @@
 const express = require('express');
 const router = express.Router();
+const trackController = require('../controllers/trackController');
+const { authenticate } = require('../middleware/auth');
+const { requireActive, requireRole } = require('../middleware/authorization');
+const { uploadTrack, handleUploadError } = require('../middleware/fileUpload');
 
-// Placeholder routes - will implement in Phase 3
-router.post('/', (req, res) => {
-  res.json({ message: 'Upload track - coming soon' });
-});
+// Public routes
+router.get('/', trackController.getAllTracks);
+router.get('/search', trackController.searchTracks);
+router.get('/:id', trackController.getTrack);
+router.get('/user/:userId', trackController.getUserTracks);
 
-router.get('/', (req, res) => {
-  res.json({ message: 'List tracks - coming soon' });
-});
+// Increment play count (public - no auth required)
+router.post('/:id/play', trackController.playTrack);
 
-router.get('/search', (req, res) => {
-  res.json({ message: 'Search tracks - coming soon' });
-});
+// Creator-only routes
+router.post(
+  '/',
+  authenticate,
+  requireActive(),
+  requireRole(['creator', 'admin']),
+  uploadTrack,
+  handleUploadError,
+  trackController.createTrack
+);
 
-router.post('/:id/like', (req, res) => {
-  res.json({ message: 'Like track - coming soon' });
-});
+router.put(
+  '/:id',
+  authenticate,
+  requireActive(),
+  requireRole(['creator', 'admin']),
+  trackController.updateTrack
+);
 
-router.delete('/:id/like', (req, res) => {
-  res.json({ message: 'Unlike track - coming soon' });
-});
+router.delete(
+  '/:id',
+  authenticate,
+  requireActive(),
+  requireRole(['creator', 'admin']),
+  trackController.deleteTrack
+);
+
+// Like/unlike (authenticated users only)
+router.post('/:id/like', authenticate, requireActive(), trackController.toggleLike);
 
 module.exports = router;

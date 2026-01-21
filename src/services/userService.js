@@ -1,6 +1,7 @@
 const { supabaseAdmin } = require('../config/database');
 const { USER_STATUSES } = require('../utils/constants');
 const { NotFoundError, ConflictError, ValidationError } = require('../utils/errors');
+const followService = require('./followService');
 
 /**
  * Get user by ID with profile information
@@ -283,6 +284,56 @@ const getUserStats = async () => {
   return data[0];
 };
 
+/**
+ * Get public user profile by ID (for viewing other users)
+ * @param {string} userId - User ID
+ * @param {string} viewerId - Optional viewer ID to check follow status
+ * @returns {Promise<Object>} Public user profile with counts
+ */
+const getPublicProfile = async (userId, viewerId = null) => {
+  const { data: user, error } = await supabaseAdmin
+    .from('users')
+    .select(
+      `
+      id,
+      role,
+      status,
+      created_at,
+      profiles (
+        username,
+        display_name,
+        bio,
+        avatar_url,
+        artist_name
+      )
+    `
+    )
+    .eq('id', userId)
+    .single();
+
+  if (error) {
+    if (error.code === 'PGRST116') {
+      throw new NotFoundError('User not found');
+    }
+    throw error;
+  }
+
+  // Get follower/following counts
+  const counts = await followService.getFollowCounts(userId);
+
+  // Check if viewer is following this user
+  let is_following = false;
+  if (viewerId && viewerId !== userId) {
+    is_following = await followService.isFollowing(viewerId, userId);
+  }
+
+  return {
+    ...user,
+    ...counts,
+    is_following,
+  };
+};
+
 module.exports = {
   getUserById,
   getUserByUsername,
@@ -292,4 +343,5 @@ module.exports = {
   approveUsers,
   updateUserStatus,
   getUserStats,
+  getPublicProfile,
 };

@@ -30,7 +30,7 @@ const errorHandler = (err, req, res, _next) => {
   }
 
   // Mongoose validation error
-  if (err.name === 'ValidationError') {
+  if (err.name === 'ValidationError' && err.errors) {
     const message = Object.values(err.errors)
       .map(val => val.message)
       .join(', ');

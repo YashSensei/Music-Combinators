@@ -1,4 +1,5 @@
 const userService = require('../services/userService');
+const followService = require('../services/followService');
 const { ValidationError } = require('../utils/errors');
 const { PAGINATION } = require('../utils/constants');
 
@@ -9,9 +10,15 @@ const getCurrentUser = async (req, res, next) => {
   try {
     const user = await userService.getUserById(req.user.id);
 
+    // Add follower/following counts
+    const counts = await followService.getFollowCounts(req.user.id);
+
     res.json({
       success: true,
-      data: user,
+      data: {
+        ...user,
+        ...counts,
+      },
     });
   } catch (error) {
     next(error);
@@ -140,9 +147,120 @@ const getUserByUsername = async (req, res, next) => {
   }
 };
 
+/**
+ * Get user public profile by ID
+ * @route GET /api/users/:id
+ */
+const getPublicProfile = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const viewerId = req.user?.id;
+
+    const profile = await userService.getPublicProfile(id, viewerId);
+
+    res.json({
+      success: true,
+      data: profile,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Follow a user
+ * @route POST /api/users/:id/follow
+ */
+const followUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    await followService.followUser(req.user.id, id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully followed user',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Unfollow a user
+ * @route DELETE /api/users/:id/follow
+ */
+const unfollowUser = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    await followService.unfollowUser(req.user.id, id);
+
+    res.status(200).json({
+      success: true,
+      message: 'Successfully unfollowed user',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get user's followers
+ * @route GET /api/users/:id/followers
+ */
+const getFollowers = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { page, limit } = req.query;
+
+    const result = await followService.getFollowers(id, {
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 20,
+    });
+
+    res.json({
+      success: true,
+      data: result.followers,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Get users that a user is following
+ * @route GET /api/users/:id/following
+ */
+const getFollowing = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { page, limit } = req.query;
+
+    const result = await followService.getFollowing(id, {
+      page: page ? parseInt(page) : 1,
+      limit: limit ? parseInt(limit) : 20,
+    });
+
+    res.json({
+      success: true,
+      data: result.following,
+      pagination: result.pagination,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   getCurrentUser,
   updateProfile,
   searchUsers,
   getUserByUsername,
+  getPublicProfile,
+  followUser,
+  unfollowUser,
+  getFollowers,
+  getFollowing,
 };

@@ -1,21 +1,46 @@
 const express = require('express');
 const router = express.Router();
+const reelController = require('../controllers/reelController');
+const { authenticate } = require('../middleware/auth');
+const { requireActive, requireRole } = require('../middleware/authorization');
+const { uploadReel, handleUploadError } = require('../middleware/fileUpload');
 
-// Placeholder routes - will implement in Phase 3
-router.post('/', (req, res) => {
-  res.json({ message: 'Upload reel - coming soon' });
-});
+// Public routes
+router.get('/feed', reelController.getReelFeed);
+router.get('/:id', reelController.getReel);
+router.get('/user/:userId', reelController.getUserReels);
 
-router.get('/feed', (req, res) => {
-  res.json({ message: 'Get feed - coming soon' });
-});
+// Increment view count (public - no auth required)
+router.post('/:id/view', reelController.viewReel);
 
-router.post('/:id/like', (req, res) => {
-  res.json({ message: 'Like reel - coming soon' });
-});
+// Creator-only routes
+router.post(
+  '/',
+  authenticate,
+  requireActive(),
+  requireRole(['creator', 'admin']),
+  uploadReel,
+  handleUploadError,
+  reelController.createReel
+);
 
-router.delete('/:id/like', (req, res) => {
-  res.json({ message: 'Unlike reel - coming soon' });
-});
+router.put(
+  '/:id',
+  authenticate,
+  requireActive(),
+  requireRole(['creator', 'admin']),
+  reelController.updateReel
+);
+
+router.delete(
+  '/:id',
+  authenticate,
+  requireActive(),
+  requireRole(['creator', 'admin']),
+  reelController.deleteReel
+);
+
+// Like/unlike (authenticated users only)
+router.post('/:id/like', authenticate, requireActive(), reelController.toggleLike);
 
 module.exports = router;

@@ -22,6 +22,7 @@ Music Combinators (MC) is a discovery-first platform for underrated and early-st
 - **Creator Applications**: Manual approval workflow for role elevation
 - **Admin Panel**: Core moderation and user management tools
 - **Search**: Basic text search for users and tracks
+- **Traction Metrics**: Basic follower counts, view/play counts, like counts
 
 ### ❌ What's Excluded (No Feature Creep)
 - Comments system
@@ -29,7 +30,7 @@ Music Combinators (MC) is a discovery-first platform for underrated and early-st
 - Playlists or albums
 - Analytics dashboards
 - Advanced search filters
-- Social features beyond likes
+- Listen time tracking / detailed analytics
 - Content moderation AI
 - Push notifications
 - Mobile apps (backend only)
@@ -118,6 +119,8 @@ Frontend (React) → Node.js API → Supabase (Postgres + Auth + Storage)
 - `audio_url` (required, Supabase Storage)
 - `cover_url` (optional, Supabase Storage)
 - `duration` (integer, seconds)
+- `play_count` (integer, default: 0)
+- `like_count` (integer, default: 0)
 - `is_active` (boolean, default: true)
 - `created_at` (timestamptz)
 
@@ -126,6 +129,8 @@ Frontend (React) → Node.js API → Supabase (Postgres + Auth + Storage)
 - `user_id` (FK to users.id)
 - `caption` (text)
 - `video_url` (required, Supabase Storage)
+- `view_count` (integer, default: 0)
+- `like_count` (integer, default: 0)
 - `is_active` (boolean, default: true)
 - `created_at` (timestamptz)
 
@@ -137,6 +142,13 @@ Frontend (React) → Node.js API → Supabase (Postgres + Auth + Storage)
 - `created_at` (timestamptz)
 - UNIQUE(user_id, content_type, content_id)
 
+**follows** (user-to-user relationships)
+- `id` (uuid)
+- `follower_id` (FK to users.id) - user who follows
+- `following_id` (FK to users.id) - user being followed
+- `created_at` (timestamptz)
+- UNIQUE(follower_id, following_id)
+
 **settings** (admin configuration)
 - `key` (text, PK)
 - `value` (text)
@@ -146,6 +158,8 @@ Frontend (React) → Node.js API → Supabase (Postgres + Auth + Storage)
 - `profiles.artist_name` (creator searches)  
 - `tracks.title` (text searches)
 - `likes.user_id, likes.content_type, likes.content_id` (composite for engagement queries)
+- `follows.follower_id` (get users I follow)
+- `follows.following_id` (get my followers)
 
 ## API Surface Overview
 
@@ -158,16 +172,25 @@ Frontend (React) → Node.js API → Supabase (Postgres + Auth + Storage)
 - `PUT /users/me/profile` - Update profile
 - `POST /users/creator-application` - Apply for creator status
 - `GET /users/search` - Search users by username/artist_name
+- `GET /users/:id` - Get user profile by ID (public view)
+- `POST /users/:id/follow` - Follow a user
+- `DELETE /users/:id/follow` - Unfollow a user
+- `GET /users/:id/followers` - Get user's followers (paginated)
+- `GET /users/:id/following` - Get users that user follows (paginated)
 
 ### Content Routes (Creators Only)
 - `POST /tracks` - Upload new track
 - `GET /tracks` - List all tracks (paginated)
+- `GET /tracks/:id` - Get track details with counts
 - `GET /tracks/search` - Search tracks by title
+- `POST /tracks/:id/play` - Increment play count
 - `POST /tracks/:id/like` - Toggle like on track
 - `DELETE /tracks/:id/like` - Remove like from track
 
 - `POST /reels` - Upload new reel  
 - `GET /reels/feed` - Get chronological feed
+- `GET /reels/:id` - Get reel details with counts
+- `POST /reels/:id/view` - Increment view count
 - `POST /reels/:id/like` - Toggle like on reel
 - `DELETE /reels/:id/like` - Remove like from reel
 
@@ -280,15 +303,40 @@ music-combinators-backend/
 - Remove remaining debug logs if any
 - Run security audit on RLS policies
 
-### Phase 3: Content Management (Week 3) - TODO
-- [ ] File upload service (Supabase Storage)
-- [ ] Track upload/management system
-- [ ] Reel upload/management system  
-- [ ] Like/unlike functionality
-- [ ] Basic search implementation
+### Phase 3: Content Management (Week 3) ✅ COMPLETE
+- [x] File upload service (Supabase Storage)
+- [x] Track upload/management system
+- [x] Reel upload/management system  
+- [x] Like/unlike functionality
+- [x] Follow/unfollow system
+- [x] View/play count tracking
+- [x] Basic search implementation
+- [x] User profile public view with follower counts
+
+**✅ Completed Features:**
+- File upload system with validation (audio/video/image)
+- Track CRUD with play count tracking
+- Reel CRUD with view count tracking
+- Like/unlike for tracks and reels with auto-count updates
+- Follow/unfollow users with follower/following lists
+- Public user profiles with follower/following counts
+- Search tracks by title
+- Chronological reel feed
+- Database functions for efficient count increments
+- Storage integration with Supabase Storage
+
+**🧪 Tested End-to-End:**
+- User signup → approval → track/reel upload
+- Follow system with count updates
+- File uploads (audio, video) working correctly
+- Authorization protecting creator-only routes
 
 ### Phase 4: Admin Panel & Polish (Week 4)
 - [ ] Admin routes and controllers
+- [ ] **Waitlist approval endpoints**
+  - [ ] Approve single user by ID (POST /admin/users/:id/approve)
+  - [ ] Batch approve X users (POST /admin/users/batch-approve) - First come first serve
+  - [ ] Get waitlisted users list with pagination
 - [ ] Settings management system
 - [ ] Content moderation (remove tracks/reels)
 - [ ] Input validation refinement
