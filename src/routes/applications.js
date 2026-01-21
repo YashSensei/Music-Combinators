@@ -8,9 +8,9 @@ const { requireActive, requireRole } = require('../middleware/authorization');
 /**
  * @route   POST /api/applications
  * @desc    Submit a creator application
- * @access  Private (active listeners only)
+ * @access  Private (authenticated users - waitlisted or active)
  */
-router.post('/', authenticate, requireActive(), applicationController.submitApplication);
+router.post('/', authenticate, applicationController.submitApplication);
 
 /**
  * @route   GET /api/applications/me

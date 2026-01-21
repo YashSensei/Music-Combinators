@@ -258,28 +258,26 @@ const updateReel = async (reelId, userId, updates) => {
 /**
  * Delete reel
  * @param {string} reelId - Reel ID
- * @param {string} userId - User ID (for ownership verification)
+ * @param {string} userId - User ID (for ownership verification, null for admin)
  * @returns {Promise<void>}
  */
-const deleteReel = async (reelId, userId) => {
+const deleteReel = async (reelId, userId = null) => {
   // Get reel to retrieve file URL
-  const { data: reel } = await supabaseAdmin
-    .from('reels')
-    .select('video_url')
-    .eq('id', reelId)
-    .eq('user_id', userId)
-    .single();
+  let query = supabaseAdmin.from('reels').select('video_url, user_id').eq('id', reelId);
+
+  // If userId provided, verify ownership
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data: reel } = await query.single();
 
   if (!reel) {
     throw new NotFoundError('Reel not found or unauthorized');
   }
 
   // Delete from database
-  const { error } = await supabaseAdmin
-    .from('reels')
-    .delete()
-    .eq('id', reelId)
-    .eq('user_id', userId);
+  const { error } = await supabaseAdmin.from('reels').delete().eq('id', reelId);
 
   if (error) {
     // eslint-disable-next-line no-console
