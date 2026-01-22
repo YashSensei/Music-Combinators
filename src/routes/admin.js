@@ -13,7 +13,7 @@ router.get('/stats', adminController.getPlatformStats);
 
 // Waitlist management
 router.get('/waitlist', adminController.getWaitlistedUsers);
-router.post('/users/:id/approve', adminController.approveUser);
+router.post('/users/approve', adminController.approveUser);
 router.post('/users/batch-approve', adminController.batchApproveUsers);
 
 // User moderation

@@ -13,11 +13,22 @@ const getCurrentUser = async (req, res, next) => {
     // Add follower/following counts
     const counts = await followService.getFollowCounts(req.user.id);
 
+    // Get creator application status if exists
+    const { supabaseAdmin } = require('../config/database');
+    const { data: application } = await supabaseAdmin
+      .from('creator_applications')
+      .select('id, status, submitted_at')
+      .eq('user_id', req.user.id)
+      .order('submitted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
     res.json({
       success: true,
       data: {
         ...user,
         ...counts,
+        application: application || null,
       },
     });
   } catch (error) {

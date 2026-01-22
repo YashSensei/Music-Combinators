@@ -62,11 +62,25 @@ const getWaitlistedUsers = async (options = {}) => {
 };
 
 /**
- * Approve a single user from waitlist
- * @param {string} userId - User ID to approve
+ * Approve a single user from waitlist by email
+ * @param {string} email - User email to approve
  * @returns {Promise<Object>} Updated user
  */
-const approveUser = async userId => {
+const approveUser = async email => {
+  // Query auth.users table via RPC or direct query to find user by email
+  const { data: authUsers, error: listError } = await supabaseAdmin.auth.admin.listUsers();
+
+  if (listError) throw listError;
+
+  const authUser = authUsers.users.find(u => u.email === email);
+
+  if (!authUser) {
+    throw new Error('User not found with this email');
+  }
+
+  const userId = authUser.id;
+
+  // Now approve the user
   const { data, error } = await supabaseAdmin
     .from('users')
     .update({
@@ -74,7 +88,7 @@ const approveUser = async userId => {
       approved_at: new Date().toISOString(),
     })
     .eq('id', userId)
-    .eq('status', 'waitlisted') // Only approve if currently waitlisted
+    .eq('status', 'waitlisted')
     .select(
       `
       id,
@@ -88,13 +102,14 @@ const approveUser = async userId => {
 
   if (error) {
     if (error.code === 'PGRST116') {
-      throw new Error('User not found or already approved');
+      throw new Error('User not in waitlist or already approved');
     }
     throw error;
   }
 
   return {
     id: data.id,
+    email: email,
     role: data.role,
     status: data.status,
     approved_at: data.approved_at,

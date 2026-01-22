@@ -1,6 +1,7 @@
 const adminService = require('../services/adminService');
 const trackService = require('../services/trackService');
 const reelService = require('../services/reelService');
+const { supabaseAdmin } = require('../config/database');
 
 /**
  * Get waitlisted users
@@ -23,12 +24,20 @@ const getWaitlistedUsers = async (req, res, next) => {
 };
 
 /**
- * Approve single user from waitlist
+ * Approve single user from waitlist by email
  */
 const approveUser = async (req, res, next) => {
   try {
-    const { id } = req.params;
-    const result = await adminService.approveUser(id);
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({
+        success: false,
+        message: 'Email is required',
+      });
+    }
+
+    const result = await adminService.approveUser(email);
 
     res.json({
       success: true,
@@ -142,7 +151,7 @@ const getPlatformStats = async (req, res, next) => {
 const deleteTrack = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await trackService.deleteTrack(id, req.user.id); // Admin can delete any track
+    await trackService.deleteTrack(id, null); // null = admin bypass ownership check
 
     res.json({
       success: true,
@@ -159,7 +168,7 @@ const deleteTrack = async (req, res, next) => {
 const deleteReel = async (req, res, next) => {
   try {
     const { id } = req.params;
-    await reelService.deleteReel(id, req.user.id); // Admin can delete any reel
+    await reelService.deleteReel(id, null); // null = admin bypass ownership check
 
     res.json({
       success: true,
@@ -185,8 +194,6 @@ const banUser = async (req, res, next) => {
         message: 'Cannot ban yourself',
       });
     }
-
-    const { supabaseAdmin } = require('../config/database');
 
     const { data, error } = await supabaseAdmin
       .from('users')
@@ -221,8 +228,6 @@ const banUser = async (req, res, next) => {
 const unbanUser = async (req, res, next) => {
   try {
     const { id } = req.params;
-
-    const { supabaseAdmin } = require('../config/database');
 
     const { data, error } = await supabaseAdmin
       .from('users')
