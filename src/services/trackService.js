@@ -340,28 +340,29 @@ const updateTrack = async (trackId, userId, updates) => {
 /**
  * Delete track
  * @param {string} trackId - Track ID
- * @param {string} userId - User ID (for ownership verification)
+ * @param {string} userId - User ID (for ownership verification, null for admin)
  * @returns {Promise<void>}
  */
-const deleteTrack = async (trackId, userId) => {
+const deleteTrack = async (trackId, userId = null) => {
   // Get track to retrieve file URLs
-  const { data: track } = await supabaseAdmin
+  let query = supabaseAdmin
     .from('tracks')
-    .select('audio_url, cover_url')
-    .eq('id', trackId)
-    .eq('user_id', userId)
-    .single();
+    .select('audio_url, cover_url, user_id')
+    .eq('id', trackId);
+
+  // If userId provided, verify ownership
+  if (userId) {
+    query = query.eq('user_id', userId);
+  }
+
+  const { data: track } = await query.single();
 
   if (!track) {
     throw new NotFoundError('Track not found or unauthorized');
   }
 
   // Delete from database
-  const { error } = await supabaseAdmin
-    .from('tracks')
-    .delete()
-    .eq('id', trackId)
-    .eq('user_id', userId);
+  const { error } = await supabaseAdmin.from('tracks').delete().eq('id', trackId);
 
   if (error) {
     // eslint-disable-next-line no-console

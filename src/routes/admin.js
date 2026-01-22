@@ -1,41 +1,32 @@
 const express = require('express');
 const router = express.Router();
+const adminController = require('../controllers/adminController');
+const { authenticate } = require('../middleware/auth');
+const { requireRole } = require('../middleware/authorization');
 
-// Placeholder routes - will implement in Phase 4
-router.get('/users/waitlist', (req, res) => {
-  res.json({ message: 'Get waitlist - coming soon' });
-});
+// All admin routes require authentication and admin role
+router.use(authenticate);
+router.use(requireRole(['admin']));
 
-router.post('/users/approve', (req, res) => {
-  res.json({ message: 'Approve users - coming soon' });
-});
+// Platform statistics
+router.get('/stats', adminController.getPlatformStats);
 
-router.get('/creator-applications', (req, res) => {
-  res.json({ message: 'Get creator applications - coming soon' });
-});
+// Waitlist management
+router.get('/waitlist', adminController.getWaitlistedUsers);
+router.post('/users/approve', adminController.approveUser);
+router.post('/users/batch-approve', adminController.batchApproveUsers);
 
-router.post('/creator-applications/:id/approve', (req, res) => {
-  res.json({ message: 'Approve creator - coming soon' });
-});
+// User moderation
+router.post('/users/:id/ban', adminController.banUser);
+router.post('/users/:id/unban', adminController.unbanUser);
 
-router.post('/creator-applications/:id/reject', (req, res) => {
-  res.json({ message: 'Reject creator - coming soon' });
-});
+// Creator applications
+router.get('/creator-applications', adminController.getCreatorApplications);
+router.post('/creator-applications/:id/approve', adminController.approveCreatorApplication);
+router.post('/creator-applications/:id/reject', adminController.rejectCreatorApplication);
 
-router.get('/settings', (req, res) => {
-  res.json({ message: 'Get settings - coming soon' });
-});
-
-router.put('/settings', (req, res) => {
-  res.json({ message: 'Update settings - coming soon' });
-});
-
-router.delete('/tracks/:id', (req, res) => {
-  res.json({ message: 'Delete track - coming soon' });
-});
-
-router.delete('/reels/:id', (req, res) => {
-  res.json({ message: 'Delete reel - coming soon' });
-});
+// Content moderation
+router.delete('/tracks/:id', adminController.deleteTrack);
+router.delete('/reels/:id', adminController.deleteReel);
 
 module.exports = router;
