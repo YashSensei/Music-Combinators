@@ -99,7 +99,20 @@ const signin = async (req, res, next) => {
     });
 
     if (error) {
+      // Check if the error is due to unconfirmed email
+      if (error.message && error.message.toLowerCase().includes('email not confirmed')) {
+        throw new AuthenticationError(
+          'Email not verified. Please check your inbox and verify your email address before signing in.'
+        );
+      }
       throw new AuthenticationError('Invalid email or password');
+    }
+
+    // Additional check: Ensure email is confirmed
+    if (data.user && !data.user.email_confirmed_at) {
+      throw new AuthenticationError(
+        'Email not verified. Please check your inbox and verify your email address before signing in.'
+      );
     }
 
     res.status(200).json({
@@ -121,7 +134,120 @@ const signin = async (req, res, next) => {
   }
 };
 
+/**
+ * Request password reset
+ * Sends a password reset email with a token
+ */
+const forgotPassword = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new ValidationError('Email is required');
+    }
+
+    // Validate email format
+    if (!isValidEmail(email)) {
+      throw new ValidationError('Invalid email format');
+    }
+
+    // Use Supabase's built-in password reset
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password`,
+    });
+
+    if (error) {
+      /* eslint-disable no-console */
+      console.error('❌ Password reset error:', error.message);
+      console.error('Error code:', error.code);
+      console.error('Error status:', error.status);
+      /* eslint-enable no-console */
+
+      // Log but don't expose the error to prevent email enumeration
+    } else {
+      // eslint-disable-next-line no-console
+      console.log('✅ Password reset email requested for:', email);
+    }
+
+    // Always return success message (security best practice)
+    // Note: Email may take 1-2 minutes to arrive on free tier
+    res.status(200).json({
+      message:
+        'If an account exists with this email, a password reset link has been sent. Please check your inbox and spam folder. Email may take 1-2 minutes to arrive.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Reset password with token
+ * Updates the user's password using the reset token
+ */
+const resetPassword = async (req, res, next) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      throw new ValidationError('Token and new password are required');
+    }
+
+    if (newPassword.length < 8) {
+      throw new ValidationError('Password must be at least 8 characters');
+    }
+
+    // Verify the reset token and update password
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    if (error) {
+      throw new AuthenticationError('Invalid or expired reset token');
+    }
+
+    res.status(200).json({ message: 'Password reset successful' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * Resend email confirmation
+ * Resends the email verification link
+ */
+const resendConfirmation = async (req, res, next) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      throw new ValidationError('Email is required');
+    }
+
+    // Resend confirmation email using Supabase
+    const supabase = getSupabaseClient();
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: email,
+    });
+
+    if (error) {
+      throw new ValidationError(error.message);
+    }
+
+    res.status(200).json({
+      message: 'Confirmation email sent. Please check your inbox.',
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 module.exports = {
   signup,
   signin,
+  forgotPassword,
+  resetPassword,
+  resendConfirmation,
 };

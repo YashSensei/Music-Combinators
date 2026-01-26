@@ -1,4 +1,5 @@
 const { supabaseAdmin } = require('../config/database');
+const emailService = require('./emailService');
 
 /**
  * Get waitlisted users (paginated)
@@ -105,6 +106,17 @@ const approveUser = async email => {
       throw new Error('User not in waitlist or already approved');
     }
     throw error;
+  }
+
+  // Send approval email notification
+  try {
+    if (emailService.isConfigured()) {
+      await emailService.sendWaitlistApprovalEmail(email, data.profiles.username);
+    }
+  } catch (emailError) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to send approval email:', emailError);
+    // Don't fail the approval if email fails
   }
 
   return {
@@ -301,6 +313,23 @@ const approveCreatorApplication = async applicationId => {
 
   if (updateUserError) throw updateUserError;
 
+  // Get user email for notification
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(application.user_id);
+
+  // Send approval email notification
+  try {
+    if (emailService.isConfigured() && authUser?.user?.email) {
+      await emailService.sendCreatorApprovalEmail(
+        authUser.user.email,
+        updatedUser.profiles.username
+      );
+    }
+  } catch (emailError) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to send creator approval email:', emailError);
+    // Don't fail the approval if email fails
+  }
+
   return {
     application_id: applicationId,
     user: {
@@ -320,6 +349,29 @@ const approveCreatorApplication = async applicationId => {
  * @returns {Promise<Object>} Updated application
  */
 const rejectCreatorApplication = async (applicationId, reason = null) => {
+  // First get application details for email
+  const { data: application, error: fetchError } = await supabaseAdmin
+    .from('creator_applications')
+    .select(
+      `
+      id,
+      user_id,
+      status,
+      users!inner(
+        profiles!inner(username)
+      )
+    `
+    )
+    .eq('id', applicationId)
+    .single();
+
+  if (fetchError) throw fetchError;
+
+  if (application.status !== 'pending') {
+    throw new Error('Application not found or already processed');
+  }
+
+  // Update application
   const { data, error } = await supabaseAdmin
     .from('creator_applications')
     .update({
@@ -337,6 +389,24 @@ const rejectCreatorApplication = async (applicationId, reason = null) => {
       throw new Error('Application not found or already processed');
     }
     throw error;
+  }
+
+  // Get user email for notification
+  const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(data.user_id);
+
+  // Send rejection email notification
+  try {
+    if (emailService.isConfigured() && authUser?.user?.email) {
+      await emailService.sendCreatorRejectionEmail(
+        authUser.user.email,
+        application.users.profiles.username,
+        reason
+      );
+    }
+  } catch (emailError) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to send creator rejection email:', emailError);
+    // Don't fail the rejection if email fails
   }
 
   return {

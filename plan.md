@@ -362,6 +362,31 @@ music-combinators-backend/
 - No ESLint errors
 - All routes wired correctly
 
+### Phase 4.5: OAuth & Email Services (Production Essentials)
+- [ ] **OAuth Integration**
+  - [ ] Google OAuth
+  - [ ] GitHub OAuth
+  - [ ] OAuth callback handling
+  - [ ] Link OAuth accounts to existing users
+- [ ] **Email Service Setup**
+  - [ ] Configure email provider (SendGrid/Nodemailer/AWS SES)
+  - [ ] Email templates system
+  - [ ] Email queue for reliability
+- [ ] **Email Notifications**
+  - [ ] Signup verification email with OTP
+  - [ ] Password reset email with token
+  - [ ] Waitlist approval notification
+  - [ ] Creator application approved notification
+  - [ ] Creator application rejected notification
+- [ ] **Password Management**
+  - [ ] Forgot password flow
+  - [ ] Reset password with token
+  - [ ] Password change for logged-in users
+- [ ] **Email Verification**
+  - [ ] Verify email on signup
+  - [ ] Resend verification email
+  - [ ] Email verified status tracking
+
 ### Phase 5: Testing & Deployment Prep (Week 5)
 - [ ] Unit test suite (core business logic)
 - [ ] Integration tests (API endpoints)

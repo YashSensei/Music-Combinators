@@ -17,6 +17,7 @@ const trackRoutes = require('./routes/tracks');
 const reelRoutes = require('./routes/reels');
 const adminRoutes = require('./routes/admin');
 const uploadRoutes = require('./routes/upload');
+const emailRoutes = require('./routes/email');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -67,6 +68,7 @@ app.use('/api/tracks', trackRoutes);
 app.use('/api/reels', reelRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/email', emailRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
